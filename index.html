@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<head>
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>ARPostcardTest</title>
+    <!-- three.js library -->
+    <script src='three.js/examples/vendor/three.js/build/three.min.js'></script>
+    <!-- three.js load GLTF -->
+    <script src='three.js/examples/vendor/three.js/GLTFLoader.js'></script>
+    <!-- ar.js -->
+    <script src='three.js/build/ar-nft.js'></script>
+    <!-- Object3D.js -->
+    <script type="module" src='https://arjs-cors-proxy.herokuapp.com/https://raw.githack.com/SomiWang/ARPostcardJs/master/three.js/src/core/Object3D.js'></script>
+
+</head>
+
+<script>
+    window.addEventListener("load", function () {
+
+        setTimeout(function () {
+            window.scrollTo(0, 1);
+        }, 10);
+
+    });
+</script>
+
+<style>
+    .arjs-loader {
+        height: 100%;
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-color: rgba(0, 0, 0, 0.8);
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+        .arjs-loader div {
+            text-align: center;
+            font-size: 1.25em;
+            color: white;
+        }
+</style>
+
+
+<video id="video" loop crossOrigin="anonymous" playsinline style="display:none">
+    <source src="https://arjs-cors-proxy.herokuapp.com/https://raw.githack.com/SomiWang/ARPostcardJs/master/three.js/webM/DogLayer.webm"
+            type='video/webm'>
+</video>
+
+<body style="margin : 0px; overflow: hidden;">
+
+    <div class="arjs-loader">
+        <div>Loading, please wait...</div>
+    </div>
+
+    <!--<body style='margin : 0px; overflow: hidden; font-family: Monospace;'>-->
+    <script>
+
+        var clock = new THREE.Clock();
+        var deltaTime = 0;
+        var totalTime = 0;
+
+        let mainCamera, scene, renderer, loader, markerControls1;
+
+        var arToolkitSource, arToolkitContext;
+
+        var markerRoot1, pivotRoot;
+
+        var video;
+
+        initialize();
+        animate();
+
+        function initialize() {
+
+            scene = new THREE.Scene();
+
+            //Main camera
+            mainCamera = new THREE.Camera();
+            scene.add(mainCamera);
+
+            //Lights
+            let ambientLight = new THREE.AmbientLight(0xcccccc, 1.0);
+            ambientLight.castShadow = true;
+            scene.add(ambientLight);
+
+            //Renderer
+            renderer = new THREE.WebGLRenderer({
+                antialias: true,
+                alpha: true
+            });
+            renderer.setClearColor(0x000000, 0)
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.domElement.style.position = 'absolute'
+            renderer.domElement.style.top = '0px'
+            renderer.domElement.style.left = '0px'
+            document.body.appendChild(renderer.domElement);
+
+            // setup arToolkitSource
+            arToolkitSource = new THREEx.ArToolkitSource({
+                sourceType: 'webcam',
+            });
+
+            arToolkitSource.init(function onReady() {
+                setTimeout(function () {
+                    onResize()
+                }, 1000);
+            });
+
+            // handle resize event
+            window.addEventListener('resize', function () {
+                onResize();
+            });                      
+
+            // setup arToolkitContext
+
+            // create atToolkitContext
+            arToolkitContext = new THREEx.ArToolkitContext({
+                //cameraParametersUrl: "https://arjs-cors-proxy.herokuapp.com/https://raw.githack.com/SomiWang/ARPostcardJs/master/data/data/camera_para.dat",
+                detectionMode: 'mono'
+            });
+
+            // copy projection matrix to camera when initialization compilete
+            arToolkitContext.init(function onCompleted() {
+                mainCamera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
+            });
+
+            // build markerControls
+            markerRoot1 = new THREE.Group();
+            markerRoot1.name = 'marker1';
+            scene.add(markerRoot1);
+            markerControls1 = new THREEx.ArMarkerControls(arToolkitContext, markerRoot1, {
+                type: 'nft',
+                descriptorsUrl: 'https://arjs-cors-proxy.herokuapp.com/https://raw.githack.com/SomiWang/ARPostcardJs/master/data/dataNFT/Postcard/Postcard',
+                smooth: true,
+                smoothCount:15
+            })
+
+            //loadGLTF("https://arjs-cors-proxy.herokuapp.com/https://raw.githack.com/SomiWang/ARPostcardJs/master/three.js/examples/resources/TestCubeCave3/TestCubeCave3.gltf");
+
+            pivotRoot = new THREE.Object3D();
+
+            //Video
+            video = document.getElementById('video');
+
+            video.load(); // must call after setting/changing source
+
+            videoTexture = new THREE.VideoTexture(video);
+            //videoTexture.minFilter = THREE.LinearFilter;
+            //videoTexture.magFilter = THREE.LinearFilter;
+            videoTexture.format = THREE.RGBAFormat;
+
+
+            let material1 = new THREE.MeshBasicMaterial({ map: videoTexture, transparent: true });
+
+
+            let geometry1 = new THREE.PlaneGeometry(155, 110);
+            let mesh1 = new THREE.Mesh(geometry1, material1);
+            mesh1.position.set(77, 0, -55);
+            mesh1.rotation.x = -Math.PI / 2;
+            pivotRoot.add(mesh1);
+            //markerRoot1.add(mesh1);
+
+            // the invisibility cloak (box with a hole)
+            let geometry0 = new THREE.BoxGeometry(16, 10, 14);
+            geometry0.faces.splice(4, 2); // make hole by removing top two triangles
+
+            let material0 = new THREE.MeshBasicMaterial({
+                colorWrite: false
+            });
+
+            let mesh0 = new THREE.Mesh(geometry0, material0);
+            mesh0.scale.set(8, 8, 8);
+            mesh0.position.set(77, -47, -55);
+            pivotRoot.add(mesh0);
+            markerRoot1.add(pivotRoot);
+        }
+
+
+        function onResize() {
+            arToolkitSource.onResizeElement()
+            arToolkitSource.copyElementSizeTo(renderer.domElement)
+            if (arToolkitContext.arController !== null) {
+                arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas)
+            }
+        }
+
+        function loadGLTF(url) {
+
+            loader = new THREE.GLTFLoader();//.setPath('https://arjs-cors-proxy.herokuapp.com/https://raw.githack.com/SomiWang/ARPostcardJs/master/three.js/examples/resources/');
+            loader.load(url, function (gltf) {
+                var _root = gltf.scene.children[0];
+
+                _root.scale.set(5, 5, 5);
+
+                _root.children.forEach(element => {
+                    element.position.set(
+                        element.position.x - 15,
+                        element.position.y + 3,
+                        element.position.z + 5
+                    );
+
+                    element.castShadow = true;
+                });
+                _root.rotation.x = Math.PI / 2;
+                _root.rotation.z = Math.PI;
+                markerRoot1.add(_root);
+            });
+        }
+
+        function update() {
+            // update artoolkit on every frame
+            if (arToolkitSource.ready !== false) {
+                //markerControls1.smooth=true;
+                arToolkitContext.update(arToolkitSource.domElement);
+                video.play();
+
+            }
+            else {
+                video.pause();
+                video.currentTime = 0;
+                //markerControls1.smooth=false;
+            }
+        }
+
+        function render() {
+            renderer.render(scene, mainCamera);
+        }
+
+
+        function animate() {
+            requestAnimationFrame(animate);
+            deltaTime = clock.getDelta();
+            totalTime += deltaTime;
+            update();
+            render();
+        }
+
+    </script>
+
+</body>
+    </html>
