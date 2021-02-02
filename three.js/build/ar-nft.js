@@ -780,7 +780,7 @@ function load(msg) {
             ar.trackNFTMarkerId(markerId);
             postMessage({ type: 'endLoading' })
         }, function (err) {
-				console.log('Error in loading marker on Worker' + nftMarkerUrl, err)
+            console.log('Error in loading marker on Worker', err)
         });
 
         // ...and we listen for event when marker has been found from camera
