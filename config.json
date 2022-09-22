@@ -1,6 +1,6 @@
 {
   "addPath": "",
-  "cameraPara": "https://arjs-cors-proxy.herokuapp.com/https://raw.githack.com/SomiWang/ARnftSomi/master/examples/Data/camera_para.dat",
+  "cameraPara": "examples/Data/camera_para.dat",
   "videoSettings": {
     "width": {
       "min": 640,
